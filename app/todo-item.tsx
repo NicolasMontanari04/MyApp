@@ -29,5 +29,6 @@ export default function TodoItem({ todo, onToggle, onRemove }: Props) {
         X
       </Button>
     </li>
+    
   );
 }
