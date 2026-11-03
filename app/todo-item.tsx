@@ -2,8 +2,10 @@
 
 
 import type { Todo } from "@/lib/todos";
-import {Button} from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 
 // Le props del componente: cosa riceve dal "padre" (TodoList)
 type Props = {
@@ -17,18 +19,17 @@ type Props = {
 export default function TodoItem({ todo, onToggle, onRemove }: Props) {
   return (
     <li className="flex items-center justify-between border-b py-2">
-      <label className={`flex items-center gap-2 ${todo.done ? "line-through text-gray-400" : ""}`}>
+      <Label className={cn(todo.done && "line-through text-muted-foreground")}>
         <Checkbox
           checked={todo.done}
           onCheckedChange={() => onToggle(todo)}
-          className="mr-2"
         />
         {todo.title}
-      </label>
+      </Label>
       <Button variant="ghost" size="icon" aria-label="Elimina" onClick={() => onRemove(todo.id)}>
         X
       </Button>
     </li>
-    
+
   );
 }

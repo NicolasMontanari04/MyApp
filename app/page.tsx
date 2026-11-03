@@ -1,6 +1,8 @@
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { getTodos } from "@/lib/todos";
+import Link from "next/link";
+import { buttonVariants } from "@/components/ui/button";
 import TodoList from "./todo-list";
 
 // Server Component: la parte fissa della pagina
@@ -12,6 +14,9 @@ export default function Home() {
       <Suspense fallback={<p>Caricamento...</p>}>
         <TodosLoader />
       </Suspense>
+      <Link href="/test" className={buttonVariants()}>
+        Vai alle info
+      </Link>
     </main>
   );
 }
