@@ -10,7 +10,7 @@ export default function Prova() {
   return (
     <main className="flex flex-col items-center gap-8 p-16">
       <h1 className="text-3xl font-bold">Contatore</h1>
-      {/* Mentre il valore arriva da Supabase, si vede il fallback */}
+      {/* Mentre il valore arriva dal database, si vede il fallback */}
       <Suspense fallback={<p>Caricamento...</p>}>
         <CounterLoader />
       </Suspense>

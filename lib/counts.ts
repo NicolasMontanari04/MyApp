@@ -1,23 +1,18 @@
 import "server-only";
-import { supabase } from "./supabase";
+import { getDb } from "./db";
 
-const TABLE = "Pig";
 const COUNT_ID = 1; // l'unica riga della tabella
 
 // Legge il valore attuale
 export async function getCount(): Promise<number> {
-    const { data, error } = await supabase
-        .from(TABLE)
-        .select("Number")
-        .eq("id", COUNT_ID)
-        .single();
-    if (error) throw new Error(error.message);
-    return data.Number;
+  const row = getDb().prepare("SELECT number FROM pig WHERE id = ?").get(COUNT_ID);
+  return (row as { number: number }).number;
 }
 
-// Aumenta di 1 nel database (funzione SQL increment_count) e restituisce il nuovo valore
+// Aumenta di 1 con una sola istruzione SQL, così nessun clic va perso
 export async function incrementCount(): Promise<number> {
-    const { data, error } = await supabase.rpc("increment_count");
-    if (error) throw new Error(error.message);
-    return data;
+  const row = getDb()
+    .prepare("UPDATE pig SET number = number + 1 WHERE id = ? RETURNING number")
+    .get(COUNT_ID);
+  return (row as { number: number }).number;
 }

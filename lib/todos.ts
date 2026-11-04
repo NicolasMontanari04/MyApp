@@ -1,63 +1,60 @@
 import "server-only";
-import { supabase } from "./supabase";
+import { getDb } from "./db";
 
 export type Todo = { id: number; title: string; done: boolean };
+
+// SQLite non ha il tipo boolean: done è salvato come 0 o 1
+type TodoRow = { id: number; title: string; done: number };
 
 // Le colonne che ci servono (created_at non lo mandiamo al front-end)
 const COLUMNS = "id, title, done";
 
-// Ogni chiamata a Supabase restituisce { data, error }.
-// Se c'è un errore lo "lanciamo": Next.js risponderà 500 al client.
+// Trasforma una riga del database in un Todo, con done booleano.
+// Crea anche un oggetto normale: quelli di node:sqlite non hanno prototipo
+// e React non li accetta come props per i Client Component.
+function toTodo(row: TodoRow): Todo {
+  return { id: row.id, title: row.title, done: row.done === 1 };
+}
+
+// I "?" sono parametri: il testo dell'utente non entra mai dentro la query,
+// e questo protegge dalla SQL injection.
 
 export async function getTodos(): Promise<Todo[]> {
-  const { data, error } = await supabase
-    .from("todos")       // FROM todos
-    .select(COLUMNS)     // SELECT id, title, done
-    .order("id");        // ORDER BY id
-  if (error) throw new Error(error.message);
-  return data;
+  const rows = getDb().prepare(`SELECT ${COLUMNS} FROM todos ORDER BY id`).all();
+  return (rows as TodoRow[]).map(toTodo);
 }
 
 export async function findTodo(id: number): Promise<Todo | undefined> {
-  const { data, error } = await supabase
-    .from("todos")
-    .select(COLUMNS)
-    .eq("id", id)        // WHERE id = ...
-    .maybeSingle();      // al massimo una riga: oggetto oppure null
-  if (error) throw new Error(error.message);
-  return data ?? undefined; // "??" = se è null, usa undefined
+  const row = getDb().prepare(`SELECT ${COLUMNS} FROM todos WHERE id = ?`).get(id);
+  return row ? toTodo(row as TodoRow) : undefined;
 }
 
 export async function createTodo(title: string): Promise<Todo> {
-  const { data, error } = await supabase
-    .from("todos")
-    .insert({ title })   // INSERT INTO todos (title) VALUES (...)
-    .select(COLUMNS)     // ...e restituisci la riga creata (con l'id nuovo)
-    .single();           // esattamente una riga
-  if (error) throw new Error(error.message);
-  return data;
+  const row = getDb()
+    .prepare(`INSERT INTO todos (title) VALUES (?) RETURNING ${COLUMNS}`)
+    .get(title);
+  return toTodo(row as TodoRow);
 }
 
 export async function updateTodo(
   id: number,
   changes: Partial<Pick<Todo, "title" | "done">>
 ): Promise<Todo | undefined> {
-  const { data, error } = await supabase
-    .from("todos")
-    .update(changes)     // UPDATE todos SET ...
-    .eq("id", id)        // WHERE id = ...
-    .select(COLUMNS)
-    .maybeSingle();      // null se l'id non esiste
-  if (error) throw new Error(error.message);
-  return data ?? undefined;
+  const title = changes.title ?? null;
+  const done = changes.done === undefined ? null : Number(changes.done);
+  const row = getDb()
+    .prepare(
+      // COALESCE(?, title): se il valore è null, resta quello attuale
+      `UPDATE todos
+       SET title = COALESCE(?, title), done = COALESCE(?, done)
+       WHERE id = ?
+       RETURNING ${COLUMNS}`
+    )
+    .get(title, done, id);
+  return row ? toTodo(row as TodoRow) : undefined;
 }
 
 export async function deleteTodo(id: number): Promise<boolean> {
-  const { data, error } = await supabase
-    .from("todos")
-    .delete()            // DELETE FROM todos
-    .eq("id", id)        // WHERE id = ...
-    .select("id");       // restituisce le righe eliminate
-  if (error) throw new Error(error.message);
-  return data.length > 0; // true se ha eliminato qualcosa
+  const result = getDb().prepare("DELETE FROM todos WHERE id = ?").run(id);
+  return result.changes > 0; // true se ha eliminato qualcosa
 }

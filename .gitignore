@@ -10,6 +10,7 @@
 !.yarn/releases
 !.yarn/versions
 
+.claude/
 # testing
 /coverage
 
@@ -32,6 +33,11 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+
+# sqlite database
+data/*.db
+data/*.db-shm
+data/*.db-wal
 
 # vercel
 .vercel
